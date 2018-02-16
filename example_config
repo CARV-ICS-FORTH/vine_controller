@@ -1,0 +1,13 @@
+## Add a library path (!! NOT just vine-applications/vine_applications)
+path ../vine-applications/vine_applications/darkGray
+
+# Add an accelerator
+## Format accel <Type> <Name> <Thead2Core Pin> <Job type(AnyJob, Batch, User)> <accelerator specific params ... >
+
+## GPU has one specific parameter, GPU id as listed in nvidia-smi]
+
+sched sched1 VineRoundRobin
+accel GPU GPU0 0 AnyJob 0     #P1000 (1)
+
+# Format group <Name> <Scheduler Name> <Accelerator Name1> ...
+group FAST_GPU sched1 GPU.*
