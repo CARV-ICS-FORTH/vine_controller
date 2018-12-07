@@ -36,7 +36,7 @@ void Scheduler :: setGroup(GroupConfig * group)
 
 Scheduler::~Scheduler() {}
 
-void Scheduler::postTaskExecution(vine_task_msg_s *task)
+void Scheduler::postTaskExecution(accelThread *th, vine_task_msg_s *task)
 {
 }
 

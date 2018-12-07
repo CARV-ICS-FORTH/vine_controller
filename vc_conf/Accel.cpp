@@ -18,27 +18,39 @@
  *  ------
  * [1] http://www.apache.org/licenses/LICENSE-2.0 [1]
 */
-#ifndef GPU_ACCELTHREAD
-#define GPU_ACCELTHREAD
-#include <pthread.h>
-#include <mutex>
-#include <atomic>
-#include <vector>
-#include "timers.h"
-class GPUaccelThread;
+#include "Accel.h"
+#include <stdexcept>
 
-#include "accelThread.h"
-class GPUaccelThread : public accelThread {
-	public:
-		GPUaccelThread(vine_pipe_s * v_pipe, AccelConfig &conf);
-		~GPUaccelThread();
-		virtual bool acceleratorInit(); /* Function that initializes a GPU accelerator */
-		virtual void acceleratorRelease(); /* Function that resets a GPU accelerator */
-		virtual void printOccupancy();
-		std::mutex mutexGPUAccess;
-		void reset(accelThread * );
-	
-	private:
-		int pciId;
-};
-#endif
+Accel :: Accel()
+: cpumask(-1)
+{
+
+}
+
+void Accel :: pin(std::bitset<64> & available)
+{
+	auto legit = available & cpumask;
+	if(legit.none())
+		std::runtime_error("No available cores!");
+	for(size_t c = 0 ; c < legit.size() ; c++)
+	{
+		if(legit[c])
+		{
+			cpumask = std::bitset<64>();
+			cpumask = 1<<c;
+			core = c;
+			available.reset(c);
+			break;
+		}
+	}
+}
+
+std::ostream & operator<<(std::ostream & os,const Accel & accel)
+{
+	os << "accel " << accel.type << " " << accel.name << " " << accel.core << " AnyJob ";
+	if(accel.type == "GPU")
+		os << accel.id <<" # " << accel.com << " ";
+	os << std::endl;
+	return os;
+}
+

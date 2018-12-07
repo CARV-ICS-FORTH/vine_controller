@@ -28,7 +28,7 @@ Csv :: Csv(const char * fname)
 
 Csv &  Csv :: print()
 {
-	std::chrono::duration<unsigned long long,std::nano> tstamp = std::chrono::system_clock::now()-start;
-	ofs << tstamp.count();
+//	std::chrono::duration<unsigned long long,std::nano> tstamp = std::chrono::system_clock::now()-start;
+//	ofs << tstamp.count();
 	return (*this);
 }

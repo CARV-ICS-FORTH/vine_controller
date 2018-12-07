@@ -85,6 +85,8 @@ else()
     unset(XILINX_SDACCEL CACHE)
 endif(ENABLE_SDACCEL)
 
+add_subdirectory(vc_conf)
+
 # if cuda is available build the cuda version as well
 if(CUDA_FOUND)
     if(CMAKE_MAJOR_VERSION LESS 3)

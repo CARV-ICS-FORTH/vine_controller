@@ -125,16 +125,16 @@ bool prepareCUDADevice() {
 	int size = sizeof(int);
 	cudaError_t error;
 	error = cudaMalloc((void**)&d_a,size);
-
 	if (error != cudaSuccess){
 		//cout <<" First CUDA Malloc Failed at "<< __LINE__ << " .  Error " <<cudaGetErrorString(error)<< " with code  " << error <<endl;
 		return false;
 	}
-
-	if (cudaFree(d_a) != cudaSuccess) {
-		cout<<"Free failed"<<endl;
-		return false;
-	}
+	float *h_a = (float *)malloc(size);
+	cudaMemcpy(d_a, h_a, size, cudaMemcpyHostToDevice);
+	//if (cudaFree(d_a) != cudaSuccess) {
+	//	cout<<"Free failed"<<endl;
+	//	return false;
+	//}
 	return true;
 
 }

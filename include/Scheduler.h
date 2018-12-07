@@ -33,7 +33,7 @@ class Scheduler {
         virtual ~Scheduler() ;
         virtual utils_queue_s  *selectVirtualAcceleratorQueue(accelThread *th);
         virtual vine_task_msg_s *selectTask(accelThread *th) = 0;
-		virtual void postTaskExecution(vine_task_msg_s *task);
+	virtual void postTaskExecution(accelThread *th, vine_task_msg_s *task);
         virtual void loadConfigurationFile() ;
     protected:
 		GroupConfig * group;

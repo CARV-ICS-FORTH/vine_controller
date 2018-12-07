@@ -32,6 +32,8 @@ class accelThread;
 #include "Config.h"
 #include "Factory.h"
 #include "Scheduler.h"
+
+using namespace std;
 #define VECTOR_WITH_DURATIONS_SIZE 30
 class accelThread {
 	public:
@@ -62,6 +64,8 @@ class accelThread {
 		void setJobPreference(AccelConfig::JobPreference jpref);
 		void enable();
 		void disable();
+		vine_task_msg_s * getRunningTask();
+		virtual void reset(accelThread *);
 	private:
 		pthread_mutex_t enable_mtx;
 		/* thread*/
@@ -82,8 +86,11 @@ class accelThread {
 		int numOfConcurrentVAQs;
 		/*Array with all VAQs per accelerator type (returned from vine_accel_list)*/
 		vine_accel **allVirtualAccels;
+		/*Task that is currenlty executed to the accelerator*/
+		vine_task_msg_s *runningTask;
 };
 
+void printAccelThreadState (string currState, accelThread &currThread, vine_task_msg_s *vine_task, size_t outstanding);
 extern Factory<accelThread,vine_pipe_s *, AccelConfig &> threadFactory;
 
 /**

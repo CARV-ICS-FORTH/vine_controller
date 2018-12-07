@@ -18,27 +18,24 @@
  *  ------
  * [1] http://www.apache.org/licenses/LICENSE-2.0 [1]
 */
-#ifndef GPU_ACCELTHREAD
-#define GPU_ACCELTHREAD
-#include <pthread.h>
-#include <mutex>
-#include <atomic>
-#include <vector>
-#include "timers.h"
-class GPUaccelThread;
+#ifndef ACCEL_HEADER
+#define ACCEL_HEADER
+#include <iostream>
+#include <string>
+#include <bitset>
 
-#include "accelThread.h"
-class GPUaccelThread : public accelThread {
-	public:
-		GPUaccelThread(vine_pipe_s * v_pipe, AccelConfig &conf);
-		~GPUaccelThread();
-		virtual bool acceleratorInit(); /* Function that initializes a GPU accelerator */
-		virtual void acceleratorRelease(); /* Function that resets a GPU accelerator */
-		virtual void printOccupancy();
-		std::mutex mutexGPUAccess;
-		void reset(accelThread * );
-	
-	private:
-		int pciId;
+struct Accel
+{
+	Accel();
+        std::string type;
+        std::string name;
+        std::string com;
+        int core;
+        int id;
+	std::bitset<64> cpumask;
+	void pin(std::bitset<64> & available);
 };
+
+std::ostream & operator<<(std::ostream & os,const Accel & accel);
+
 #endif

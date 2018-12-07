@@ -22,13 +22,13 @@
 	#define CSV_HEADER_FILE
 	#include <chrono>
 	#include <fstream>
+	#include <iostream>
 
 	class Csv
 	{
 		public:
 			Csv(const char * fname);
 			Csv & print();
-		private:
 			std::chrono::time_point<std::chrono::system_clock> start;
 			std::ofstream ofs;
 	};
@@ -36,7 +36,7 @@
 	template<class TYPE>
 	Csv & operator<<(Csv & csv,TYPE value)
 	{
-		csv << " " << value;
+		csv.ofs << " " << value;
 		return csv;
 	}
 

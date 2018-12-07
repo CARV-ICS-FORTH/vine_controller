@@ -1,13 +1,57 @@
 ## Add a library path (!! NOT just vine-applications/vine_applications)
 path ../vine-applications/vine_applications/darkGray
+path ../vine-applications/vine_applications/NVIDIA_samples
+path ../vine-applications/vine_applications/rodinia_3.1
 
-# Add an accelerator
+
+#need full path for djin tonic
+path /home1/public/manospavl/vineyardProject/vine-applications/vine_applications/djinn_tonic/djinn-1.0
+
+
+#Declare a scheduler
+##Weighted_Round_Robin
+#sched wr_sched1 WeightedRoundRobin
+#sched wr_sched2 WeightedRoundRobin
+
+##Round Robin
+#priority               
+
+## Add an accelerator
 ## Format accel <Type> <Name> <Thead2Core Pin> <Job type(AnyJob, Batch, User)> <accelerator specific params ... >
 
 ## GPU has one specific parameter, GPU id as listed in nvidia-smi]
 
 sched sched1 VineRoundRobin
 accel GPU GPU0 0 AnyJob 0     #P1000 (1)
+accel GPU GPU1 1 AnyJob 1     #P1000 (4)
+accel GPU GPU3 10 AnyJob 2    #P1000 (3)
+accel GPU GPU4 11 AnyJob 3    #P1000 (2)
 
+
+/*
+sched sched1 FlexyRR sla:sla.spec
+accel GPU GPU0 0 AnyJob 0     #P1000 (1)
+accel GPU GPU1 1 AnyJob 1     #P1000 (4)
+accel GPU GPU3 10 AnyJob 2    #P1000 (3)
+accel GPU GPU4 11 AnyJob 3    #P1000 (2)
+*/
+/*
+# elastic priority               
+sched sched1 FlexyRR sla:/home1/public/manospavl/vineyardProject/vine_controller/sla.spec, elastic:true  
+accel GPU GPU0 0 UserJob 0     #P1000 (1)
+accel GPU GPU1 1 NoJob 1     #P1000 (4)
+accel GPU GPU3 10 NoJob 2    #P1000 (3)
+accel GPU GPU4 11 BatchJob 3    #P1000 (2)
+*/
+
+##Specify a group
 # Format group <Name> <Scheduler Name> <Accelerator Name1> ...
 group FAST_GPU sched1 GPU.*
+
+/*
+# Xilinx SDA setup
+# SDA specific params <affinity for profiling thread> <Vendor> <device id> <xclbin file> <kernel names ...>
+accel SDA SDA1 2 Xilinx xilinx:adm-pcie-ku3:1ddr:3.0 bin_Black_Scholes_hw.xclbin krnl_Black_Scholes
+sched sda_sched VineRoundRobin
+group ALL_SDA sda_sched SDA1
+*/

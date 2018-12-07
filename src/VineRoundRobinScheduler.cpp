@@ -34,14 +34,14 @@ VineRoundRobinScheduler::~VineRoundRobinScheduler() {}
  **/
 utils_queue_s *VineRoundRobinScheduler::selectVirtualAcceleratorQueue(accelThread *th)
 {
-    /*init variables*/
-    vine_accel ** arrayAllVAQs = th->getAllVirtualAccels();
-    vine_accel_s *phys = th->getAccelConfig().vine_accel;
-    int numOfVAQs = th->getNumberOfVirtualAccels();
+	/*init variables*/
+	vine_accel ** arrayAllVAQs = th->getAllVirtualAccels();
+	vine_accel_s *phys = th->getAccelConfig().vine_accel;
+	int numOfVAQs = th->getNumberOfVirtualAccels();
 
-    size_t index;
-    index = ++virtualQueueIndex[phys];
-    return vine_vaccel_queue((vine_vaccel_s*)arrayAllVAQs[index%numOfVAQs]);
+	size_t index;
+	index = ++virtualQueueIndex[phys];
+	return vine_vaccel_queue((vine_vaccel_s*)arrayAllVAQs[index%numOfVAQs]);
 }
 /**
  * Select task from the array returned from vine_accel_list
@@ -51,26 +51,41 @@ utils_queue_s *VineRoundRobinScheduler::selectVirtualAcceleratorQueue(accelThrea
  **/
 vine_task_msg_s *VineRoundRobinScheduler::selectTask(accelThread *th)
 {
-    int allVaqs;
-    /*Task poped from that VAQ*/
-    vine_task_msg_s *vine_task;
-    /*VAQ that the task is going to be poped*/
-    utils_queue_s *selectedVAQ;
-    //cout<<"Array size"<< arraySize<<endl;
-    for (allVaqs = 0; allVaqs != th->getNumberOfVirtualAccels(); allVaqs++)
-    {
-        /*Call the select VAQ to find the VAQ that we are going to pop task*/
-        selectedVAQ = selectVirtualAcceleratorQueue(th);
-        /*If there is no VAQ*/
-        if (!selectedVAQ)
-            continue;
-        /*take the task from that queue*/
-        vine_task = (vine_task_msg_s *)utils_queue_pop(selectedVAQ);
-        /*Pop a task*/
-        if (vine_task)
-            return vine_task;
-    }
-    return 0;
+	int allVaqs;
+	size_t usedSlots;
+	/*Task poped from that VAQ*/
+	vine_task_msg_s *vine_task;
+	/*VAQ that the task is going to be poped*/
+	utils_queue_s *selectedVAQ;
+	//cout<<"Array size"<< arraySize<<endl;
+	for (allVaqs = 0; allVaqs != th->getNumberOfVirtualAccels(); allVaqs++)
+	{
+		/*Call the select VAQ to find the VAQ that we are going to pop task*/
+		selectedVAQ = selectVirtualAcceleratorQueue(th);
+		/*If there is no VAQ*/
+		if (!selectedVAQ)
+			continue;
+		usedSlots+= utils_queue_used_slots(selectedVAQ);
+		/*take the task from that queue*/
+		vine_task = (vine_task_msg_s *)utils_queue_pop(selectedVAQ);
+		/*Pop a task*/
+		if (vine_task)
+		{
+			printAccelThreadState("0", *th, vine_task, usedSlots+1);
+			return vine_task;
+		}
+	}
+	return 0;
+}
+void VineRoundRobinScheduler::postTaskExecution(accelThread *th, vine_task_msg_s *task)
+{
+	/*stop meassuring task exec (without queueing). Used from Flexy policy*/
+	utils_timer_set(task->stats.task_duration_without_issue,stop);
+
+	/*stop meassuring task exec (with queueing). Used from Flexy policy*/
+	utils_timer_set(task->stats.task_duration,stop);
+
+	printAccelThreadState("-1", *th, task, task->stats.usedSlots);
 }
 
 REGISTER_SCHEDULER(VineRoundRobinScheduler)

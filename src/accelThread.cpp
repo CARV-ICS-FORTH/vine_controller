@@ -25,16 +25,35 @@
 #include "accelThread.h"
 #include "VineLibMgr.h"
 #include "definesEnable.h"
+#include "Csv.h"
 #include <chrono>
 #include <ctime>
 #include <mutex>
 #include <atomic> 
+#include <exception>
+#define USERF_TASK 1
+
 using namespace ::std;
 
 static std::atomic<int> userCount;
 static std::atomic<int> batchCount;
+std::mutex myMutex;
 
 void *workFunc(void *thread);
+
+bool isUserfacingTask(vine_accel* accel)
+{
+	bool isUser =  vine_vaccel_get_job_priority((vine_vaccel_s*)accel) == USERF_TASK;
+	return isUser;
+}
+
+void secsSince1970()
+{
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	cerr<<"Seconds since Jan. 1, 1970: "<<tv.tv_sec<<endl;
+	cerr<<"USeconds since Jan. 1, 1970: "<<1000000 * tv.tv_sec + tv.tv_usec<<endl;
+}
 
 //Constructor
 accelThread::accelThread(vine_pipe_s * v_pipe, AccelConfig & accelConf):
@@ -66,7 +85,12 @@ AccelConfig & accelThread::getAccelConfig()
 /*Executes the kernel*/
 void accelThread::executeHostCode(void* functor, vine_task_msg_s* vine_task)
 {
-	(*((VineFunctor **)functor))(vine_task);
+	try {
+		(*((VineFunctor **)functor))(vine_task);
+	}catch(std::exception &e)
+	{
+		cout<<"VineFunctor !!! "<< e.what() <<endl;
+	}
 }
 
 AccelConfig::JobPreference accelThread::getJobPreference()
@@ -126,7 +150,8 @@ vine_pipe_s * accelThread :: getPipe()
 	return v_pipe;
 }
 
-void accelThread::printOccupancy() {
+void accelThread::printOccupancy() 
+{
 	/*Used for GPUs only*/
 }
 void incTasksRunning(accelThread * curAccelTh, vine_task_msg_s * execTask)
@@ -159,34 +184,97 @@ accelThread::~accelThread()
 }
 void printAcceleratorType(GroupConfig * group)
 {
-        map<int,int> acceleratorCount;
-        for(auto accel : group->getAccelerators())
-        {
-                acceleratorCount[accel.second->accelthread->getJobPreference()]++;
-        }
-        for (int i=0; i<4;i++)
-        {
-                cout<<" "<<acceleratorCount[i];
-        }
-//	cout<<endl;
+	map<int,int> acceleratorCount;
+	for(auto accel : group->getAccelerators())
+	{
+		acceleratorCount[accel.second->accelthread->getJobPreference()]++;
+	}
+	for (int i=0; i<4;i++)
+	{
+		cout<<" "<<acceleratorCount[i];
+	}
+	//	cout<<endl;
 }
 
 void my_gettime(struct timeval * tp,struct timezone *tz)
 {
-        static timeval start;
-        gettimeofday(tp,tz);
+	static timeval start;
+	gettimeofday(tp,tz);
 
-        if(!start.tv_sec)
-                start = *tp;
-        tp->tv_sec -= start.tv_sec;
-        tp->tv_usec -= start.tv_usec;
+	if(!start.tv_sec)
+		start = *tp;
+	tp->tv_sec -= start.tv_sec;
+	tp->tv_usec -= start.tv_usec;
 }
 
 #define gettimeofday my_gettime
+Csv accel_state("results/accel_state.csv");
+
+void printAccelThreadState(string currState, accelThread &currThread, vine_task_msg_s *vine_task, size_t outstanding)
+{	
+	//count execution time of a task: with queueing delay
+	unsigned long long executedTaskDuration = 0 ;
+	executedTaskDuration = utils_timer_get_duration_us(vine_task->stats.task_duration_without_issue);
+
+	//count execution time of a task: without queueing delay
+	unsigned long long executedTaskDurationWithQueueing = 0 ;
+	executedTaskDurationWithQueueing = utils_timer_get_duration_us(vine_task->stats.task_duration);
+	
+	//count execution time of a USER task (with queueing delay)
+	vine_vaccel_s * vac = (vine_vaccel_s *)vine_task->accel;
+	unsigned long long executedTaskDurationUser = 0 ;
+	unsigned long long executedTaskDurationBatch = 0 ;
+	if (isUserfacingTask(vac))
+	{
+		executedTaskDurationUser = utils_timer_get_duration_us(vine_task->stats.task_duration);
+		//cout<<__LINE__<<" USER: "<<executedTaskDurationUser<<endl;
+	}
+	else
+	{
+		executedTaskDurationBatch = utils_timer_get_duration_us(vine_task->stats.task_duration);
+		//cout<<__LINE__<<" BATCH: "<<executedTaskDurationBatch<<endl;
+	}
+
+	//timestamp
+	struct timeval time1;	
+	gettimeofday(&time1, NULL);
+	long int timestamp = time1.tv_sec * 1000000 + time1.tv_usec ;
+	map<int,int> acceleratorCount;
+
+	for(auto accel : currThread.getAccelConfig().group->getAccelerators())
+	{
+		acceleratorCount[accel.second->accelthread->getJobPreference()]++;
+	}
+
+	//if we call it with -1 (means accelerator release)
+	if (currState == "-1")
+	{
+		// CSV with timestamp, Accelerator thread name, task type to be executed (user/batch/nothing),
+		// task execution time without queueing 
+		myMutex.lock();
+		accel_state.print() << timestamp << currThread.getAccelConfig().name 
+			<< currState << acceleratorCount[1] << executedTaskDuration << executedTaskDurationWithQueueing 
+			<< outstanding << currThread.getNumberOfVirtualAccels() <<executedTaskDurationUser
+			<< executedTaskDurationBatch << "\n";
+
+		myMutex.unlock();
+	}
+	else
+	{
+
+		myMutex.lock();
+		accel_state.print() << timestamp << currThread.getAccelConfig().name 
+			<< currState << acceleratorCount[1] << 0 << 0 << outstanding << currThread.getNumberOfVirtualAccels()
+			<< 0 << 0 <<"\n";
+		myMutex.unlock();
+	}
+
+}
 
 /*Function that handles the Virtual accelerator queues */
 void *workFunc(void *thread)
 {
+	secsSince1970();
 #ifdef POWER_TIMER
 	/*used for power consumption*/
 	struct timeval power_tv1, power_tv2;
@@ -233,10 +321,8 @@ void *workFunc(void *thread)
 		chrono::duration<double> elapsedSchTaskDec = endSchTask - startSchTask;
 #endif
 
-		//cout<<"Accelerator job preference : "<<th->getJobPreference();
 		/*If there is a VALID vine_task_msg */
 		if ((uint64_t)vine_task>(uint64_t)(th->v_pipe)&& (uint64_t)vine_task<(uint64_t)(th->v_pipe)+th->v_pipe->shm_size)
-	//	if (vine_task)
 		{
 			/*Name of task*/
 			char *taskName = ((vine_object_s) ( ((vine_proc_s*)(vine_task->proc))->obj)).name;
@@ -244,8 +330,10 @@ void *workFunc(void *thread)
 			vine_accel_type_e accelThreadType = (vine_accel_type_e)(th->accelConf).vine_accel->type;
 			/*kernel of the selected task*/
 			vine_proc_s *proc;
-			//			cerr<<"!!!!!"<<(void*)vine_task<<endl;
-			//			cerr<<"!!!!!"<<(vine_vaccel_s*)(vine_task->accel)<<endl;
+
+			/*Get the currently executed task*/
+			th->runningTask=vine_task;
+
 			/*If VAQ is ANY*/
 			if (((vine_vaccel_s*)(vine_task->accel))->type == ANY)
 			{
@@ -285,18 +373,32 @@ void *workFunc(void *thread)
 					gettimeofday(&power_tv1, NULL);
 					long int powerStartedAt = power_tv1.tv_sec * 1000000 +  power_tv1.tv_usec ;
 #endif
+
 					//increment Tasks that is running
-					incTasksRunning(th, vine_task);
+					//incTasksRunning(th, vine_task);
+
 
 					vine_object_ref_inc(&(vine_task->obj));
+					/*start meassuring task exec (without queueing). Used from Flexy policy*/
+					utils_timer_set(vine_task->stats.task_duration_without_issue,start);
+
 					/*Execute the kernel specified from the task*/
 					th->executeHostCode(vine_proc_get_code(proc, 0),vine_task);
 
-					//decrement Tasks that are running
-					decTasksRunning(th, vine_task);
+					/*stop meassuring task exec (without queueing). Used from Flexy policy*/
+					utils_timer_set(vine_task->stats.task_duration_without_issue,stop);
 
+					/*stop meassuring task exec (with queueing). Used from Flexy policy*/
+					utils_timer_set(vine_task->stats.task_duration,stop);
+
+					//decrement Tasks that are running
+					//decTasksRunning(th, vine_task);
 					vine_vaccel_mark_task_done((vine_vaccel_s *)vine_task->accel);
-					selectedScheduler->postTaskExecution(vine_task);
+					selectedScheduler->postTaskExecution(th, vine_task);
+
+					/*there is no task running in the GPU*/
+					th->runningTask = 0;
+
 					vine_object_ref_dec(&(vine_task->obj));
 
 #ifdef SM_OCCUPANCY
@@ -309,7 +411,8 @@ void *workFunc(void *thread)
 					long int powerEndedAt = power_tv2.tv_sec * 1000000 + power_tv2.tv_usec ;
 					cout<<"TIME (POWER): start : "<<powerStartedAt<<" , end : "<<powerEndedAt<<" id: "<<vine_vaccel_get_cid(execVAQ);
 					printAcceleratorType(th->accelConf.group);
-					cout<<" "<<userCount<<" "<<batchCount<<endl;
+					//cout<<" "<<userCount<<" "<<batchCount;
+					//cout<<" "<<executedTaskDuration<<endl;
 #endif
 #ifdef BREAKDOWNS_CONTROLLER
 					/*stop timer*/
@@ -332,6 +435,12 @@ void *workFunc(void *thread)
 	th->acceleratorRelease();
 	return 0;
 }
+
+vine_task_msg_s * accelThread::getRunningTask()
+{
+	return runningTask;	
+}
+
 /*Search for new VAQs with ANY queues*/
 vine_accel_type_e accelThread::updateVirtAccels()
 {
@@ -344,7 +453,6 @@ vine_accel_type_e accelThread::updateVirtAccels()
 	vine_accel_type_e reducedSemAccel;
 	/*Sleep untill a task arrives*/
 	reducedSemAccel = vine_pipe_wait_for_task_type_or_any(v_pipe, accelConf.vine_accel->type);
-	//usleep(10000);
 	/*Get VAQs with type = ANY (i.e. all VAQs that exist in the system)*/
 	numOfConcurrentVAQs = vine_accel_list(ANY, 0, &allVirtualAccels);
 	int off = 0;
@@ -390,4 +498,8 @@ vine_accel_type_e accelThread::updateVirtAccels()
 	return reducedSemAccel;
 }
 
+void accelThread::reset(accelThread * caller) 
+{	
+	cout<<getAccelConfig().init_params.c_str()<<" "<<__func__<<endl;
+}
 Factory<accelThread,vine_pipe_s *, AccelConfig &> threadFactory;

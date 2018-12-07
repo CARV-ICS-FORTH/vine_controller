@@ -33,7 +33,7 @@ class VineRoundRobinScheduler : public Scheduler {
 
         /*Select a task from all the VAQs that exist in the system  */
         virtual vine_task_msg_s *selectTask( accelThread *threadPerAccel );
-
+	void postTaskExecution(accelThread *th, vine_task_msg_s *task);
     private:
         //Array with all VAQ types
         int acceleratorIndex[VINE_ACCEL_TYPES];

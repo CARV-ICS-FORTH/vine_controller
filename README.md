@@ -18,6 +18,9 @@ Controller that handles and serves vine_talk requests
 # Run
 There are two configuration files named as example_config and customerWeights:
 
+##  customerWeights
+This file should be created only in the case that you have selected WeightedRoundRobin (enabled On in Cmake) in the building procedure of vine_controler. This filee contains a list with the Weights of the customers in the system, this weights are between 1 and 100.
+
 ## example_config
 The example_config: is used firstly for specifying the path that the dynamic libraries of the supported applications are located(path). Secondly, is used for specifying the available accelerators in the system. In the second column you should add the accelererator type (GPU, CPU, FPGA etc), in the third you specify the name of the accelerator. In the fourth column the core of the system that is responsible for that accelerator is depicted. This column is used from steafinity, to run a thread in a specific core in order to avoid sharing. Finally the last column represents the place of the accelerator, for instance in case of a GPU accelerator it depicts the PCI id. 
 Additionaly, is used for making groups of different accelerators and adding a specifc scheduler to each of those groups. In more details:
