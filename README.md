@@ -44,9 +44,9 @@ Row 3 :From the above example the system has also a FPGA accelerator , the accel
     3. The accelerators that compose an accelGroup.
         This option is specified by the key word "group". The first column represents the name of the group, the second the scheduler of that group and then the accelerators that compose that group.
         
-	  GroupName     GroupScheduler     AcceleratorsOfGroup
-group     GPUs             sched1           GPU0    
-group     FPGAs            sched1           ARRIA0
+	 	 GroupName     GroupScheduler     AcceleratorsOfGroup
+	group      GPUs             sched1           GPU0    
+	group      FPGAs            sched1          ARRIA0
 
   <br />        
     4. Scheduler choice per accelGroup. The schedulers implemented are the WeightedRoundRoubin and VineRoundRobin. In our system each group of accelerators can use a different a scheduler. The choices are WeightedRoundRobin and VineRoundRobin 
