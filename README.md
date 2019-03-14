@@ -39,21 +39,20 @@ This file contains :<br />
 Row 1 :From the above example the system has a GPU  accelerator , the accelerator thread will run in the core 0 (Htop will show core 1), the accelerator name is GPU0, and the accelerator thread will serve the device which is in PCI 0. 
 <br />
 Row 2 :From the above example the system has also a CPU accelerator , the accelerator thread will run in the core 1 (Htop will show core 2), the accelerator name is CPU0.
-
+Row 3 :From the above example the system has also a FPGA accelerator , the accelerator thread will run in the core 2 (Htop will show core 3), the accelerator name is ARRIA0.
 <br />
     3. The accelerators that compose an accelGroup.
         This option is specified by the key word "group". The first column represents the name of the group, the second the scheduler of that group and then the accelerators that compose that group.
         
 	  GroupName     GroupScheduler     AcceleratorsOfGroup
-group     Fast_GPUs       weighted1*           GPU0 GPU1                
-group     Slow_GPUs       weighted2*           GPU2
+group     GPUs             sched1           GPU0    
+group     FPGAs            sched1           ARRIA0
 
   <br />        
     4. Scheduler choice per accelGroup. The schedulers implemented are the WeightedRoundRoubin and VineRoundRobin. In our system each group of accelerators can use a different a scheduler. The choices are WeightedRoundRobin and VineRoundRobin 
     
                    SchedulerName        Scheduler
-          sched     *weighted1     WeightedRoundRobin        
-          sched     *weighted2     WeightedRoundRobin
+          sched       sched1              RoundRobin        
 <br />
 
 ## Execute
@@ -96,7 +95,7 @@ As soon as the ".so" files are create when one run the controller with the path 
     
     1.a. Create a ".h" file that has a reference to the function that is going to be implemented. (eg in vine-applications/include/cl_darkGray.h). Include the .h in the cu file that is going to be used for the ".so" (vine-applications/src/opencl_darkGray.cl ) .
     
-    1.b. The kernel is the function that is going to be executed in the accelerator (in vine-applications/src/cu_darkGray.cu is __global__ void rgb_gray(...). It is called from function cu_darkGray(...)
+    1.b. The kernel is the function that is going to be executed in the accelerator (in vine-applications/src/opencl_darkGray.cl is __global__ void rgb_gray(...). It is called from function opencl_darkGray(...)
     
     1.c. The dispatcher function (hostCode) contains; the memory allocation for inputs and outputs and data trasfer from host to device memory (Host2OPENCL), the kernel call (opencl_darkGray (args, inputs, outputs)), the data transfer from device to host memory (OPENCL2Host), and the deallocation of memory in the device (OPENCLMemFree).  
     
