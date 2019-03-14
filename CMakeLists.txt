@@ -3,8 +3,11 @@ cmake_minimum_required(VERSION 2.8)
 # project name
 project(VINE)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 # we need CUDA
 find_package(CUDA QUIET)
+find_package(OpenCL QUIET)
 
 # disable builds in source tree
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
@@ -87,6 +90,22 @@ endif(ENABLE_SDACCEL)
 
 add_subdirectory(vc_conf)
 
+if(OpenCL_FOUND)
+    # include_directories(${OpenCL_INCLUDE_DIRS})
+    # link_directories(${OpenCL_LIBRARY})
+    set(CONTROLLER_SOURCES
+        ${CONTROLLER_SOURCES}
+        src/OpenCLaccelThread.cpp
+    )
+endif(OpenCL_FOUND)
+
+#opencl Altera
+link_directories(/home/intelFPGA_pro/18.0/hld/host/linux64/lib)
+include_directories(/home/intelFPGA_pro/18.0/hld/host/include/)
+set(CONTROLLER_LIBS OpenCL)
+
+
+
 # if cuda is available build the cuda version as well
 if(CUDA_FOUND)
     if(CMAKE_MAJOR_VERSION LESS 3)
@@ -99,7 +118,7 @@ if(CUDA_FOUND)
        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     )
 
-    
+
 
     if(SM_OCCUPANCY)
       cuda_add_executable(vine_controller
@@ -133,6 +152,12 @@ add_custom_target(run
   )
 
 find_library(VT_STATIC libvine_st.a PATHS "${VINE_TALK_BUILD_PATH}")
+
+
+# if(OpenCL_FOUND)
+target_link_libraries(vine_controller -lOpenCL -lrt -std=c++11)
+# endif(OpenCL_FOUND)
+
 
 if(SM_OCCUPANCY)
 target_link_libraries(vine_controller

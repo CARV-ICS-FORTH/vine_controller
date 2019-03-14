@@ -14,6 +14,7 @@ Controller that handles and serves vine_talk requests
 	* Without modifing anything type c and then g
 	* Then do make  
 * cmake automaticaly checks the existance of cuda, in both cases (with, without cuda) it creates one executable named as vine_controller that supports both situations.
+* for Opencl you need to specify the opencl dir (/lib64/libOpenCL.so)
 
 # Run
 There are two configuration files named as example_config and customerWeights:
@@ -22,16 +23,17 @@ There are two configuration files named as example_config and customerWeights:
 This file should be created only in the case that you have selected WeightedRoundRobin (enabled On in Cmake) in the building procedure of vine_controler. This filee contains a list with the Weights of the customers in the system, this weights are between 1 and 100.
 
 ## example_config
-The example_config: is used firstly for specifying the path that the dynamic libraries of the supported applications are located(path). Secondly, is used for specifying the available accelerators in the system. In the second column you should add the accelererator type (GPU, CPU, FPGA etc), in the third you specify the name of the accelerator. In the fourth column the core of the system that is responsible for that accelerator is depicted. This column is used from steafinity, to run a thread in a specific core in order to avoid sharing. Finally the last column represents the place of the accelerator, for instance in case of a GPU accelerator it depicts the PCI id. 
+The example_config: is used firstly for specifying the path that the dynamic libraries of the supported applications are located(path). Secondly, is used for specifying the available accelerators in the system. In the second column you should add the accelererator type (GPU, CPU, FPGA etc), in the third you specify the name of the accelerator. In the fourth column the jobs that the accelerator can serve (i.e. user-facing, batch, any). In the fifth column the core of the system that is responsible for that accelerator is depicted. This column is used from set afinity, to run a thread in a specific core in order to avoid sharing. Finally the last column represents the place of the accelerator, for instance in case of a GPU accelerator it depicts the PCI id. For FPGAs (only) there is one more column in which the developer of the bit stream add the compiled version of it. For instance <kernels/Binomial/krnl_Binomial.aocx>. 
 Additionaly, is used for making groups of different accelerators and adding a specifc scheduler to each of those groups. In more details:
 
 This file contains :<br />
 	1. The library path of the applications. In other words the directory that contains the dynamic libraries of the applications (../vine_applications).<br />
 	2. The accelerators that exist in the current node. The format for the accelerators is the following
 
-             Accelerator Type    Accelerator Name     Core to place accelerator thread    Accelerator selection (PCI id) 
-    accel          GPU               GPU0                            0                               0                  
-    accel          CPU               CPU0                            1                               -        
+             Accelerator Type    Accelerator Name     Jobtypes2support  Core to place accelerator thread    Accelerator selection (PCI id) 
+    accel          GPU               GPU0                   AnyJob         		0                               0                  
+    accel          CPU               CPU0                   AnyJob         		1                               -        
+    accel          FPGA              ARRIA0                 AnyJob         		2                               -        
 
 <br />
 Row 1 :From the above example the system has a GPU  accelerator , the accelerator thread will run in the core 0 (Htop will show core 1), the accelerator name is GPU0, and the accelerator thread will serve the device which is in PCI 0. 
@@ -87,6 +89,24 @@ As soon as the ".so" files are create when one run the controller with the path 
     1.d. the table contains all the functions supported from this .so . In the c_darkGray.cpp lines VINE_PROC_LIST_START(), VINE_PROCEDURE("darkGray", GPU, hostCode, sizeof(darkGrayArgs)), and VINE_PROC_LIST_END() create this table. In VINE_PROCEDURE one should add the following ("function name", "accelerator type", "the dispatcher function name", "argument size")
     
 2. Type the following in order to create ".so" library that contains the kernel : g++ -fPIC -shared <your_function_name.cpp> -o  </path/to/your_function_name.so> (eg g++ -fPIC -shared c_darkGray.cpp -o ../lib/c_darkGray.so) .
+
+## Create ".so" FPGA
+
+1. Create a file that will contains the kernel, the dispatcher function and a table that contains all the supported functions for this specific ".so" (vine-applications/src/opencl_darkGray.cl).
+    
+    1.a. Create a ".h" file that has a reference to the function that is going to be implemented. (eg in vine-applications/include/cl_darkGray.h). Include the .h in the cu file that is going to be used for the ".so" (vine-applications/src/opencl_darkGray.cl ) .
+    
+    1.b. The kernel is the function that is going to be executed in the accelerator (in vine-applications/src/cu_darkGray.cu is __global__ void rgb_gray(...). It is called from function cu_darkGray(...)
+    
+    1.c. The dispatcher function (hostCode) contains; the memory allocation for inputs and outputs and data trasfer from host to device memory (Host2OPENCL), the kernel call (opencl_darkGray (args, inputs, outputs)), the data transfer from device to host memory (OPENCL2Host), and the deallocation of memory in the device (OPENCLMemFree).  
+    
+    1.d. the table contains all the functions supported from this .so . In the c_darkGray.cpp lines VINE_PROC_LIST_START(), VINE_PROCEDURE("darkGray", OPEN_CL, hostCode, sizeof(darkGrayArgs)), and VINE_PROC_LIST_END() create this table. In VINE_PROCEDURE one should add the following ("function name", "accelerator type", "the dispatcher function name", "argument size")
+    
+2. Type the following in order to create ".so" library that contains the kernel : g++ -fPIC -shared <your_function_name.cpp> -o  </path/to/your_function_name.so> (eg g++ -fPIC -shared c_darkGray.cpp -o ../lib/c_darkGray.so) .
+
+## For FPGAs (only) 
+The bitstream is loaded in the controller from the example config. The compilation of the bitsteam depends on the acceleratos (Xilinx,
+Intel Altera). When the controller starts it configures the FPGA with the last bitstream of the list. The FPGA reconfiguration is performed at every kernel call. 
 
 # Notes
 * If by mistake one run first an application and then the controller, he/she will get segmentation fault. In order to solve it please delete the share segment by typing rm /dev/shm/"shm name" and run the controller firstly and then the application.
