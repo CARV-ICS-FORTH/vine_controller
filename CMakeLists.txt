@@ -102,7 +102,7 @@ endif(OpenCL_FOUND)
 #opencl Altera
 link_directories(/home/intelFPGA_pro/18.0/hld/host/linux64/lib)
 include_directories(/home/intelFPGA_pro/18.0/hld/host/include/)
-set(CONTROLLER_LIBS OpenCL)
+#set(CONTROLLER_LIBS OpenCL)
 
 
 
@@ -154,10 +154,11 @@ add_custom_target(run
 find_library(VT_STATIC libvine_st.a PATHS "${VINE_TALK_BUILD_PATH}")
 
 
-# if(OpenCL_FOUND)
-target_link_libraries(vine_controller -lOpenCL -lrt -std=c++11)
-# endif(OpenCL_FOUND)
+if(OpenCL_FOUND)
+	target_link_libraries(vine_controller -lOpenCL )
+endif(OpenCL_FOUND)
 
+target_link_libraries(vine_controller -lrt -std=c++11)
 
 if(SM_OCCUPANCY)
 target_link_libraries(vine_controller

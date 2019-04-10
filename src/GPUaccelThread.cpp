@@ -38,10 +38,35 @@ map <int, atomic<bool>> resetFlags;
 GPUaccelThread::GPUaccelThread(vine_pipe_s * v_pipe, AccelConfig & conf) : accelThread(v_pipe, conf)
 {
 	this->pciId=atoi(conf.init_params.c_str());
-//	resetFlags[this->pciId] = false;
+	//	resetFlags[this->pciId] = false;
 }
 
 GPUaccelThread::~GPUaccelThread() {}
+
+int GPUaccelThread::getCurrentThreadGpuID()
+{
+
+	cudaError_t error;
+	int device;
+	error = cudaGetDevice(&device);
+
+	if (error != cudaSuccess)
+	{
+		cerr << "cuda get device FAILED " << endl;
+		return -1;
+	}
+	return device;
+}
+
+int GPUaccelThread::getObjGpuId()
+{
+	        return gpuId;   
+}
+
+bool GPUaccelThread::getGpuResetState(int device)
+{
+	return resetFlags[device];	
+}
 
 /*initializes the GPU accelerator*/
 bool GPUaccelThread::acceleratorInit()
@@ -72,10 +97,11 @@ bool GPUaccelThread::acceleratorInit()
 		cout << "Failed to set device " << endl;
 		return false;
 	}
-	int device;
-	cudaGetDevice(&device);
-	cout<<"Device: "<<device<<endl;
-	resetFlags[device] = false;
+	//int device;
+	//cudaGetDevice(&device);
+	//cout<<"Device: "<<device<<endl;
+	gpuId=getCurrentThreadGpuID();
+	resetFlags[gpuId] = false;
 	/*Prepare the device */
 	if (prepareCUDADevice() == true) {
 		cout << "=====================================================" << endl<< endl;
@@ -390,18 +416,74 @@ bool GPUMemFree(vector<void *> &io)
 	mutexGPUAccess.unlock();
 	return completed;
 }
+
 //bool shouldResetGpu (int device)
 bool shouldResetGpu ()
 {
 	int device;
-//	if (device == -1)
+	//	if (device == -1)
 	cudaGetDevice(&device);
 
 	//return ( resetFlags[device].exchange(false) );
 	return ( resetFlags.at(device).exchange(false) );
 }
 
+extern bool resetPolicy ;
 
+cudaError_t my_cudaDeviceSynchronize() __attribute__((used));
+cudaError_t my_cudaDeviceSynchronize()
+{
+	float *d_a;
+	int size = sizeof(int);
+	cudaError_t error;
+
+	int device =GPUaccelThread::getCurrentThreadGpuID();
+
+
+	if (!resetPolicy){
+		return cudaDeviceSynchronize();
+	}
+
+	//cerr << __func__ << endl;
+	cudaError_t err = cudaSuccess;
+	cudaEvent_t kernelFinished;
+
+	err = cudaEventCreate(&kernelFinished);
+	if (err != cudaSuccess)
+	{
+		fprintf(stderr, "Cuda error (cudaEventCreate): %s GPUid: %d.\n", cudaGetErrorString(err), device );
+		return err;
+
+	}
+	err = cudaEventRecord(kernelFinished);
+	if (err != cudaSuccess)
+	{
+		fprintf(stderr, "Cuda error (cudaEventRecord): %s GPUid: %d.\n", cudaGetErrorString(err), device );
+		return err;
+	}
+
+	while ( (err = cudaEventQuery(kernelFinished)) == cudaErrorNotReady)
+	{
+	//	usleep(10);
+
+		if ( shouldResetGpu() )
+		{
+			cerr<<"> Actual Reset!! GPU "<< device <<endl;
+			cudaDeviceReset();
+
+			error = cudaMalloc((void**)&d_a,size);
+			if (error != cudaSuccess)
+			{
+				cout <<" First CUDA Malloc Failed at "<< __LINE__ << " .  Error " <<cudaGetErrorString(error)<< " with code  " << error <<endl;
+				return error;
+			}
+
+			//cudaDeviceSynchronize();
+			return err;
+		}
+	}
+	return err;
+}
 
 void GPUaccelThread::reset(accelThread * caller)
 {

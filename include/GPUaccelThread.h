@@ -37,8 +37,15 @@ class GPUaccelThread : public accelThread {
 		virtual void printOccupancy();
 		std::mutex mutexGPUAccess;
 		void reset(accelThread * );
+		int gpuDeviceID();
+		static int getCurrentThreadGpuID();
+		bool getGpuResetState(int dev);
+		int getObjGpuId();
 	
 	private:
 		int pciId;
+		int gpuId;
 };
+bool shouldResetGpu ();
+
 #endif

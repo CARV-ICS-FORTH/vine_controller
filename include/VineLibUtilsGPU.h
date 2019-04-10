@@ -38,7 +38,7 @@ extern bool GPUMemFree(std::vector<void *> &io);
 /* Reset GPU */
 extern bool shouldResetGpu();
 
-#define cudaDeviceSynchronize my_cudaDeviceSynchronize
+//#define cudaDeviceSynchronize my_cudaDeviceSynchronize
 
 extern cudaError_t my_cudaDeviceSynchronize() __attribute__((used));
 

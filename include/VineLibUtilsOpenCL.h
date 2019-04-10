@@ -39,6 +39,7 @@ extern bool OpenCL2Host(vine_task_msg_s *vine_task, std::vector<void *> &ioDH);
 /* Free Device memory */
 extern bool OpenCLMemFree(std::vector<void *> &io);
 
+/* Get the kernel object from a kernel function name.*/
 extern cl::Kernel OpenCLGetKernel(std::string name);
 
 /* Reset GPU */

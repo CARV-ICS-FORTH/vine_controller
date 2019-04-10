@@ -24,6 +24,7 @@
 #include "vine_pipe.h"
 #include "accelThread.h"
 #include "VineLibMgr.h"
+#include "GPUaccelThread.h"
 #include "definesEnable.h"
 #include "Csv.h"
 #include <chrono>
@@ -87,6 +88,7 @@ void accelThread::executeHostCode(void* functor, vine_task_msg_s* vine_task)
 {
 	try {
 		(*((VineFunctor **)functor))(vine_task);
+
 	}catch(std::exception &e)
 	{
 		cout<<"VineFunctor !!! "<< e.what() <<endl;
@@ -219,7 +221,7 @@ void printAccelThreadState(string currState, accelThread &currThread, vine_task_
 	//count execution time of a task: without queueing delay
 	unsigned long long executedTaskDurationWithQueueing = 0 ;
 	executedTaskDurationWithQueueing = utils_timer_get_duration_us(vine_task->stats.task_duration);
-	
+
 	//count execution time of a USER task (with queueing delay)
 	vine_vaccel_s * vac = (vine_vaccel_s *)vine_task->accel;
 	unsigned long long executedTaskDurationUser = 0 ;
@@ -331,8 +333,6 @@ void *workFunc(void *thread)
 			/*kernel of the selected task*/
 			vine_proc_s *proc;
 
-			/*Get the currently executed task*/
-			th->runningTask=vine_task;
 
 			/*If VAQ is ANY*/
 			if (((vine_vaccel_s*)(vine_task->accel))->type == ANY)
@@ -382,8 +382,14 @@ void *workFunc(void *thread)
 					/*start meassuring task exec (without queueing). Used from Flexy policy*/
 					utils_timer_set(vine_task->stats.task_duration_without_issue,start);
 
+					/*Get the currently executed task*/
+					th->runningTask=vine_task;
+
 					/*Execute the kernel specified from the task*/
 					th->executeHostCode(vine_proc_get_code(proc, 0),vine_task);
+					auto gpuThread = dynamic_cast<GPUaccelThread*>(th);
+					if(gpuThread)
+						shouldResetGpu();
 
 					/*stop meassuring task exec (without queueing). Used from Flexy policy*/
 					utils_timer_set(vine_task->stats.task_duration_without_issue,stop);
