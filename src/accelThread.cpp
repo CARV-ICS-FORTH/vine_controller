@@ -35,7 +35,7 @@
 #define USERF_TASK 1
 
 using namespace ::std;
-
+bool resetPolicy=false;
 static std::atomic<int> userCount;
 static std::atomic<int> batchCount;
 std::mutex myMutex;

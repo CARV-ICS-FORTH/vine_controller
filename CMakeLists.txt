@@ -140,6 +140,7 @@ if(CUDA_FOUND)
 else(CUDA_FOUND)
     add_executable(vine_controller
       ${CONTROLLER_SOURCES}
+      src/GPUaccelThread_dummy.cpp
     )
 
 endif(CUDA_FOUND)
