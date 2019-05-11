@@ -6,7 +6,7 @@ sched sched1 VineRoundRobin
 
 # 3. Add an accelerator
 #  FOR GPU
-accel OpenCL GPU0 0 AnyJob 1 <../vine-applications/vine_applications/opencl_darkGray/kernels/darkGray.cl>
+accel OpenCL GPU0 0 AnyJob 1 <../vine_Apps_EG/singleNode/opencl_darkGray/kernels/darkGray.cl>
 
 # 4. Specify a group
 # Format group <Name> <Scheduler Name> <Accelerator Name1> ...
