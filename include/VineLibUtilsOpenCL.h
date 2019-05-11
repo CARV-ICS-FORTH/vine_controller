@@ -18,8 +18,8 @@
  *  ------
  * [1] http://www.apache.org/licenses/LICENSE-2.0 [1]
 */
-#ifndef VINE_LIB_GPU_UTILS_HEADER
-#define VINE_LIB_GPU_UTILS_HEADER
+#ifndef VINE_LIB_OPENCL_UTILS_HEADER
+#define VINE_LIB_OPENCL_UTILS_HEADER
 
 #include "VineLibMgr.h"
 #include "vine_pipe.h"
@@ -41,6 +41,12 @@ extern bool OpenCLMemFree(std::vector<void *> &io);
 
 /* Get the kernel object from a kernel function name.*/
 extern cl::Kernel OpenCLGetKernel(std::string name);
+
+
+cl::Platform getDefaultPlatform();
+cl::Device getDefaultDevice();
+cl::Context getDefaultContext();
+cl::CommandQueue getDefaultCommandQueue();
 
 /* Reset GPU */
 // extern bool shouldResetGpu();

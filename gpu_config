@@ -1,0 +1,12 @@
+# 1.  Add the library path for the applications
+path ../vine_Apps_EG
+
+# 2. Declare a scheduler
+sched sched1 VineRoundRobin
+# 3. Add an accelerator
+accel GPU GPU0 0 AnyJob 0  
+
+
+# 4. Specify a group
+# Format group <Name> <Scheduler Name> <Accelerator Name1> ...
+group FAST_GPU sched1 GPU.*

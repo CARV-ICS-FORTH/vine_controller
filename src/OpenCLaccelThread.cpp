@@ -51,6 +51,21 @@ cl::Device defaultDevice;
 cl::Context defaultContext;
 cl::CommandQueue defaultCommandQueue;
 
+cl::Platform getDefaultPlatform() {
+	return defaultPlatform;
+}
+
+cl::Device getDefaultDevice() {
+	return defaultDevice;
+}
+
+cl::Context getDefaultContext() {
+	return defaultContext;
+}
+
+cl::CommandQueue getDefaultCommandQueue() {
+	return defaultCommandQueue;
+}
 
 inline std::string loadFile(std::string input) {
 	std::ifstream stream(input.c_str(), ios::in | ios::binary);
@@ -81,6 +96,11 @@ vector<string> decodeFilesArgs(string filesArgs) {
 vector<CL_file> loadFiles(vector<std::string> files_funcs) {
 	bool isBinary;
 	vector<CL_file> kernel_files;
+
+	cout << endl
+		 << "Loading files:" << endl;
+	cout << "-----" << endl;
+
 	for (std::vector<std::string>::iterator it = files_funcs.begin(); it != files_funcs.end(); it++) {
 		std::string f = loadFile(*it);
 		isBinary = true;
@@ -91,8 +111,11 @@ vector<CL_file> loadFiles(vector<std::string> files_funcs) {
 		cl_file.file = f;
 		cl_file.isBinary = isBinary;
 		kernel_files.push_back(cl_file);
-		cout << "file loaded: " << *it << " - from " << (isBinary ? "(binary)" : "(source)") << endl;
+		cout << "type: " << (isBinary ? "(binary)" : "(source)") << "\t - " << *it << endl;
 	}
+
+	cout << "-----" << endl;
+
 	return kernel_files;
 }
 
@@ -356,7 +379,6 @@ bool OpenCLaccelThread::initDevice(int deviceNo) {
 	try {
 		vector<cl::Platform> platforms;
 		vector<cl::Device> devices;
-		cl::CommandQueue command_queue;
 
 		cl::Platform::get(&platforms);
 		// Select the correct platform
@@ -403,15 +425,15 @@ bool OpenCLaccelThread::initDevice(int deviceNo) {
 
 						// Same here
 						vector<cl::Device> initDevices = {devices[j]};
-						cl::Context context = cl::Context(initDevices);
+						defaultContext = cl::Context(initDevices);
 
+						// cl::Context context = cl::Context(initDevices);
 						// cl::Context::setDefault(context);
-						defaultContext = context;
 
-						command_queue = cl::CommandQueue(defaultContext, defaultDevice);
+						defaultCommandQueue = cl::CommandQueue(defaultContext, defaultDevice);
 
+						// cl::CommandQueue command_queue = cl::CommandQueue(defaultContext, defaultDevice);
 						// cl::CommandQueue::setDefault(command_queue);
-						defaultCommandQueue = command_queue;
 
 						return true;
 					}
@@ -483,7 +505,7 @@ bool OpenCLaccelThread::acceleratorInit() {
 
 	if (!this->kernel_files.empty()) {
 		cout << endl
-			 << "Loading and building kernels..." << endl;
+			 << "Loading and/or building kernels..." << endl;
 
 		chrono::time_point<chrono::system_clock> startCompilation, endCompilation;
 
@@ -496,7 +518,7 @@ bool OpenCLaccelThread::acceleratorInit() {
 		endCompilation = chrono::system_clock::now();
 		auto elapsedCompilation = chrono::duration_cast<chrono::nanoseconds>(endCompilation - startCompilation);
 		cout << endl
-			 << "Kernel Compilation complete. Time elapsed: " << elapsedCompilation.count() << " nanoseconds" << endl;
+			 << "Kernel Loading complete. Time elapsed: " << elapsedCompilation.count() << " nanoseconds" << endl;
 	}
 	OpenCLresetFlags[pciId] = false;
 	/*Prepare the device */
