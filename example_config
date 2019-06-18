@@ -1,12 +1,6 @@
 # 1.  Add the library path for the applications
 
-#path ../vine-applications/vine_applications/darkGray
-#path ../vine-applications/vine_applications/NVIDIA_samples
-#path ../vine-applications/vine_applications/opencl_samples
-path ../vine-applications/vine_applications/opencl_darkGray
-#path ../vine-applications/vine_applications/rodinia_3.1/cuda
-#path ../vine-applications/vine_applications/rodinia_3.1/opencl
-
+path ../vine_Apps_EG
 
 # 2. Declare a scheduler
 sched sched1 VineRoundRobin
