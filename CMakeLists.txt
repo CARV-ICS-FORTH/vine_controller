@@ -109,7 +109,7 @@ include_directories(/home/intelFPGA_pro/18.0/hld/host/include/)
 # if cuda is available build the cuda version as well
 if(CUDA_FOUND)
     if(CMAKE_MAJOR_VERSION LESS 3)
-	  set(CUDA_NVCC_FLAGS " -Wno-deprecated-gpu-targets -std=c++11 ${CUDA_NVCC_FLAGS}")
+	  set(CUDA_NVCC_FLAGS " -Wno-deprecated-gpu-targets -std=c++11 -default-stream per-thread ${CUDA_NVCC_FLAGS}")
 	  #set(CUDA_NVCC_FLAGS " -Wno-deprecated-gpu-targets -std=c++11 -lnvidia-ml ${CUDA_NVCC_FLAGS}")
     endif(CMAKE_MAJOR_VERSION LESS 3)
     add_custom_target(run_nvvp
